@@ -10,6 +10,7 @@
   <PropertyGroup>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>botsay</ToolCommandName>
+    <RollForward>major</RollForward>
 
     <!--
       Optional: Generate the .nupkg file as part of build so tests are always against the
