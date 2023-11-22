@@ -11,11 +11,12 @@
 
   <ItemGroup>
     <!--
-      Inject the base artifacts path into the assembly so that the tests can create a nuget.config
-      that points to the correct place, regardless of the path the test harness uses to run the tests.
+      Step 2: Inject the base artifacts path (defined in //Directory.Build.props) into the assembly so that the
+      tests can create a nuget.config that points to the correct place, regardless of the path the test harness
+      uses to run the tests.
 
-      This avoids fragile tests that depend on always being run from a particular test root, or calculating
-      relative paths from the test to the artifacts.
+      This avoids fragile tests that depend on always being run from a particular test root, or calculating relative
+      paths from the test to the artifacts.
     -->
     <AssemblyMetadata Include="ArtifactsPath" Value="$(ArtifactsPath)" />
   </ItemGroup>

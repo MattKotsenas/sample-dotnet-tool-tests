@@ -13,8 +13,8 @@
     <RollForward>major</RollForward>
 
     <!--
-      Optional: Generate the .nupkg file as part of build so tests are always against the
-      latest code.
+      Step 1: (Optional) Generate the .nupkg file as part of build so tests are always
+      against the latest code.
     -->
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>

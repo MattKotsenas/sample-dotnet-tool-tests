@@ -1,8 +1,10 @@
 <Project>
   <!-- See https://aka.ms/dotnet/msbuild/customize for more details on customizing your build -->
   <PropertyGroup>
-
+    <!--
+      Step 2: Define the output location for NuGet packages. Uses .NET 8's simplified artifacts
+      layout. See https://learn.microsoft.com/en-us/dotnet/core/sdk/artifacts-output.
+    -->
     <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
-
   </PropertyGroup>
 </Project>

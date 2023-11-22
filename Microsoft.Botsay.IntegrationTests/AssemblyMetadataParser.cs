@@ -24,16 +24,7 @@ internal class AssemblyMetadataParser
 
     public IReadOnlyDictionary<string, string?> Parse()
     {
-        Dictionary<string, string?> results = new();
-
-        // Pull the paths from the <AssemblyMetadata> MSBuild property in the project file
-        IEnumerable<AssemblyMetadataAttribute> metadataAttributes = _targetAssembly.GetCustomAttributes<AssemblyMetadataAttribute>();
-
-        foreach (AssemblyMetadataAttribute attribute in metadataAttributes)
-        {
-            results.Add(attribute.Key, attribute.Value);
-        }
-
-        return results;
+        // Step 3: Retrieve the assembly metadata attributes and collect into a dictionary
+        return _targetAssembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToDictionary(a => a.Key, a => a.Value);
     }
 }

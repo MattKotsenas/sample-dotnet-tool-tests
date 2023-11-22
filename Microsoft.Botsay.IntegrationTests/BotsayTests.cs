@@ -35,13 +35,15 @@ public class BotsayTests
 
     private static Uri[] GetNuGetPackageFeedsFromArtifactsPath(string artifactsPath)
     {
+        // Step 4: Convert the artifact path(s) to a set of Uris for use in the nuget.config
         IReadOnlyCollection<string> directories = new NupkgFinder(artifactsPath).GetDirectories();
         return directories.Select(d => new Uri(d)).ToArray();
     }
 
-    private static async Task<BufferedCommandResult> Install(string temp, string nuget)
+    private static async Task<BufferedCommandResult> Install(string temp, string nugetConfig)
     {
-        string[] args = $"tool install microsoft.botsay --tool-path {temp} --prerelease --configfile {nuget}".Split(" ");
+        // Step 7: Run `dotnet tool install` and specify `--tool-path` and `--configfile`
+        string[] args = $"tool install microsoft.botsay --tool-path {temp} --prerelease --configfile {nugetConfig}".Split(" ");
 
         return await Cli.Wrap("dotnet")
         .WithArguments(args)
@@ -60,25 +62,22 @@ public class BotsayTests
     [Fact]
     public async Task CanInstallAndRun()
     {
-        // Arrange
-
-        // Use TestableIO to create a temp directory that's automatically deleted via IDisposable.
+        // Step 5: Use TestableIO to create a temp directory that's automatically deleted via IDisposable.
         // See https://github.com/TestableIO/System.IO.Abstractions.Extensions#automatic-cleanup-with-disposable-extensions
         using (_fs.CreateDisposableDirectory(out IDirectoryInfo temp))
         {
             _output.WriteLine($"Using temp directory '{temp.FullName}'.");
 
-            // Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
+            // Step 6: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
             using (PackageRepository repo = PackageRepository.Create(temp.FullName, _packageFeeds))
             {
                 // Add our temp directory to %PATH% so installed tools can be found and executed
                 Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") + $"{Path.PathSeparator}{temp.FullName}");
 
-                // Act
                 await Install(temp.FullName, repo.NuGetConfigPath);
-                BufferedCommandResult result = await Run(temp.FullName);
 
-                // Assert
+                // Step 8: Run the `botsay` tool and assert the expected output
+                BufferedCommandResult result = await Run(temp.FullName);
                 string expected = "\n" +
 @"        hello from the bot
         __________________
