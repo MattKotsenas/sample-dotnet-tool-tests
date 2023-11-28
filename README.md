@@ -104,7 +104,7 @@ and automatically cleaning up via the `IDisposable pattern`.
 ```csharp
 // Use TestableIO to create a temp directory that's automatically deleted via IDisposable.
 // See https://github.com/TestableIO/System.IO.Abstractions.Extensions#automatic-cleanup-with-disposable-extensions
-IFileSystem fs = new FileSystem();
+FileSystem fs = new();
 using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a temporary directory that is automatically cleaned up
 {
     // Use temp here as scratch space
@@ -123,6 +123,7 @@ operations from polluting the user's global cache
 ```diff
 using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a temporary directory that is automatically cleaned up
 {
+-   // Use temp here as scratch space
 +   // Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
 +   using (PackageRepository repo = PackageRepository.Create(temp.FullName, _packageFeeds))
 +   {
