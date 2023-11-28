@@ -7,9 +7,25 @@ The example tool is the `botsay` tool from the [.NET tool tutorial][dotnet-tool-
 package. The tests create a new temporary package repository and isolated [NuGet package cache][nuget-package-cache]
 to test installing and running the tool without polluting your package caches.
 
+## Why integration test?
+
+Integration tests shouldn't replace unit tests, but they can provide some additional test coverage for some important
+scenarios. For example:
+
+* Verifying dependencies or content files are packaged properly
+* Validating behavior across .NET runtime versions
+* Verifying [invoking naming rules][dotnet-tool-invoke-names]
+
 ## Tour around the repo
 
-Here's a quick description of the important parts of the repo.
+Here's a quick description of the important parts of the repo:
+
+* Steps 1 - 3 are optional, but I consider best practice to make your test projects robust to common build and
+filesystem issues
+* Steps 4 - 6 create the temporary install
+environment to ensure your test installs the correct version of your package, that the tests don't pollute your package
+caches, and clean up after any test failures
+* Steps 7 - 8 are an example of an actual install and sample invocation test
 
 ### Step 1: Generate NuGet package on build (optional)
 
@@ -161,6 +177,7 @@ Assert.Equal(expected, result.StandardOutput);
 [MSBuildProjectCreator]: https://github.com/jeffkl/MSBuildProjectCreator
 [dotnet-tool-tutorial]: https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools-how-to-create
 [nuget-package-cache]: https://learn.microsoft.com/en-us/nuget/consume-packages/managing-the-global-packages-and-cache-folders
+[dotnet-tool-invoke-names]: https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools#invoke-a-global-tool
 [dotnet-artifacts-layout]: https://learn.microsoft.com/en-us/dotnet/core/sdk/artifacts-output
 [thisassembly-github]: https://github.com/devlooped/ThisAssembly
 [nuget-config-docs]: https://learn.microsoft.com/en-us/nuget/reference/nuget-config-file#config-section
