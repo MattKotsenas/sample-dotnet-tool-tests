@@ -1,13 +1,17 @@
-# Testing dotnet global tools
+# Integration testing for NuGet packages
 
-This repo is an example of integration tests for dotnet global tools. The examples use [xUnit] (though NUnit and
-MSTest are also supported) and [MSBuildProjectCreator].
+This sample repo is an example of integration tests for NuGet packages. The `botsay` folder is an example of testing a dotnet
+global tool, and the `msbuild` folder is an example of a package that adds custom MSBuild tasks. The examples use the
+`common` folder for environment setup, which uses [MSBuildProjectCreator] and [xUnit] (though any test framework should
+work).
 
 The example tool is the `botsay` tool from the [.NET tool tutorial][dotnet-tool-tutorial] packaged locally as a NuGet
 package. The tests create a new temporary package repository and isolated [NuGet package cache][nuget-package-cache]
 to test installing and running the tool without polluting your package caches.
 
-## Why integration test?
+The MSBuild example is a simple [custom MSBuild task][custom-msbuild-tasks] that justs outputs a hello world message.
+
+## Why integration tests?
 
 Integration tests shouldn't replace unit tests, but they can provide some additional test coverage for some important
 scenarios. For example:
@@ -16,31 +20,19 @@ scenarios. For example:
 * Validating behavior across .NET runtime versions
 * Verifying [invoking naming rules][dotnet-tool-invoke-names]
 
-## Tour around the repo
+## Step-by-step process
 
-Here's a quick description of the important parts of the repo:
+Here's a step-by-step walkthrough of the setup and testing process. Start by reviewing steps 1 - 5 in the common folder.
+These steps prepare the environment and ensure:
+ * The most recent version of your package is used
+ * That tests don't pollute your package caches
+ * That tests clean up properly
 
-* Steps 1 - 3 are optional, but I consider best practice to make your test projects robust to common build and
-filesystem issues
-* Steps 4 - 6 create the temporary install
-environment to ensure your test installs the correct version of your package, that the tests don't pollute your package
-caches, and clean up after any test failures
-* Steps 7 - 8 are an example of an actual install and sample invocation test
+Steps 6 - 8 are then specific to the dotnet tool and MSBuild task scenarios, and thus are separated for clarity.
 
-### Step 1: Generate NuGet package on build (optional)
+### Common setup
 
-In `Microsoft.Botsay.csproj`, enable `GeneratePackageOnBuild` so your `.nupkg` is created on every build.
-
-```diff
-  <PropertyGroup>
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>botsay</ToolCommandName>
-    <RollForward>major</RollForward>
-+   <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-  </PropertyGroup>
-```
-
-### Step 2: Inject the artifacts path into the test assembly
+#### Step 1: Inject the artifacts path into the test assembly
 
 In order to test the NuGet packages, the tests need to be able to find them. Relying on relative paths between the main
 project's output directory and the test assembly can be fragile, especially across different test frameworks and
@@ -71,20 +63,23 @@ Next, we instruct MSBuild to inject that property into the test assembly via `<A
 + </ItemGroup>
 ```
 
-### Step 3: Retrieve the assembly metadata
+#### Step 2: Retrieve the assembly metadata
 
 Once the artifacts path is injected into the assembly, we need to retrieve it at runtime. The sample includes a
 `AssemblyMetadataParser` class to encapsulate this responsibility. The bulk of the work is a single reflection call
 like this:
 
 ```csharp
-typeof(BotsayTests).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToDictionary(a => a.Key, a => a.Value);
+Assembly testAssembly; // Get a reference to the test assembly that contains the assembly metadata
+testAssembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToDictionary(a => a.Key, a => a.Value);
 ```
 
 If you're in a scenario where reflection isn't available, you can also use a source generator such as
 [ThisAssembly][thisassembly-github].
 
-### Step 4: Convert the artifact path(s) to a set of Uris for use in the nuget.config
+#### Step 3: Convert the artifact path(s) to a set of Uris for use in the nuget.config
+
+// TODO: Update this?
 
 In the sample I provided a `NupkgFinder` class to demonstrate walking the artifacts directory to find NuGet packages.
 This strategy avoids hardcoding paths and project names into your tests, at the cost of slightly more complicated code.
@@ -95,7 +90,9 @@ If you have a very simple scenario, it's OK to hardcode paths directly to NuGet 
 Uri[] packageFeeds = new [] { new Uri(packagePath) };
 ```
 
-### Step 5: Create a temporary workspace
+#### Step 4: Create a temporary workspace
+
+// TODO: Update reference to BotsayTests.cs
 
 Next we need to create a temporary directory to use as a workspace. In `BotsayTests.cs`, start by creating a temp dir.
 In the sample I've used TestableIO's `CreateDisposableDirectory` extension, as it simplifies creating a temp directory
@@ -111,7 +108,7 @@ using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a tempor
 }
 ```
 
-### Step 6: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
+#### Step 5: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
 
 Inside our temp dir, use MSBuildProjectCreator's `PackageRepository`. This class does a few things for us:
 
@@ -135,7 +132,22 @@ using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a tempor
 
 Lastly, we append the temp dir to the `%PATH%` environment variable so that any installed tools can be found.
 
-### Step 7: Run dotnet install and pass in our temp parameters
+### Dotnet tool tests
+
+#### Step 6: Generate NuGet package on build (optional)
+
+In `Microsoft.Botsay.csproj`, enable `GeneratePackageOnBuild` so your `.nupkg` is created on every build.
+
+```diff
+  <PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>botsay</ToolCommandName>
+    <RollForward>major</RollForward>
++   <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+```
+
+#### Step 7: Run dotnet install and pass in our temp parameters
 
 The final setup step is to run `dotnet tool install` and pass in the temp dir as the `--tool-path` and the
 `nuget.config` file to `--configfile`. Note that if your NuGet packages are pre-release (e.g. include "-beta" in the
@@ -161,7 +173,7 @@ using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a tempor
 In the sample I use the excellent [CliWrap][cliwrap-github] library to make working with external processes easier. Of
 course you can always use `Process.Start()` directly if you wish.
 
-### Step 8: Run your test
+#### Step 8: Run your test
 
 With that setup in place, we can now run our test. Execute the `botsay` tool and assert the standard output is as
 expected.
@@ -174,6 +186,33 @@ BufferedCommandResult result = await Cli.Wrap("botsay").WithArguments(args).Exec
 Assert.Equal(expected, result.StandardOutput);
 ```
 
+### MSBuild tests
+
+#### Step 6: Generate NuGet package on build (optional)
+
+// TODO: Update project name and diff
+
+In `xxx.csproj`, enable `GeneratePackageOnBuild` so your `.nupkg` is created on every build.
+
+```diff
+  <PropertyGroup>
+  xxxx
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>botsay</ToolCommandName>
+    <RollForward>major</RollForward>
++   <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+```
+
+#### Step 7:
+
+// TODO: Add step to create sample csproj and add reference to package
+
+#### Step 8:
+
+// TODO: Add tests and incremental build test
+
+[custom-msbuild-tasks]: https://learn.microsoft.com/en-us/visualstudio/msbuild/tutorial-custom-task-code-generation?view=vs-2022
 [xUnit]: https://xunit.net/
 [MSBuildProjectCreator]: https://github.com/jeffkl/MSBuildProjectCreator
 [dotnet-tool-tutorial]: https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools-how-to-create
