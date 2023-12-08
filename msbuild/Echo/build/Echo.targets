@@ -1,5 +1,8 @@
 <Project>
-  <Target Name="DoEcho" BeforeTargets="AfterBuild">
+  <!-- TODO: Reference blog post about incremental builds / .stamp files -->
+  <Target Name="DoEcho" BeforeTargets="AfterBuild" Inputs="@(Compile)" Outputs="$(IntermediateOutputPath)/DoEcho.stamp">
     <EchoTask />
+
+    <Touch Files="$(IntermediateOutputPath)/DoEcho.stamp" AlwaysCreate="true" />
   </Target>
 </Project>

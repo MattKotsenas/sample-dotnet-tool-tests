@@ -1,3 +1,8 @@
 <Project>
-  <UsingTask AssemblyFile="../tasks/netstandard2.0/Echo.dll" TaskName="Echo.EchoTask" />
+  <!--
+    Added TaskFactory="TaskHostFactory" so that MSBuildProjectCreator's inproc build doesn't lock our dll.
+
+    TODO: Is there a better way to test this without forcing the performance hit of a short-lived process?
+  -->
+  <UsingTask AssemblyFile="../tasks/netstandard2.0/Echo.dll" TaskName="Echo.EchoTask" TaskFactory="TaskHostFactory" />
 </Project>

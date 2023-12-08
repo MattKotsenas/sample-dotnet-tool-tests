@@ -8,6 +8,14 @@
 
   <ItemGroup>
     <PackageReference Include="MSBuild.ProjectCreation" Version="11.0.1" />
+
+    <!--
+      Needed for transitive pinning. See: https://github.com/jeffkl/MSBuildProjectCreator/issues/170.
+
+      Should be able to remove once Microsoft.NET.Test.Sdk verion >= 17.9.0. See
+      https://github.com/microsoft/vstest/commit/ec9a138e10e68331b860765907e8650fd9ec1931.
+    -->
+    <PackageReference Include="NuGet.Frameworks" Version="6.8.0" />
   </ItemGroup>
 
 </Project>

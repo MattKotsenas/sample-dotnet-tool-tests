@@ -37,6 +37,8 @@ Steps 6 - 8 are then specific to the dotnet tool and MSBuild task scenarios, and
 
 ### Common setup
 
+// TODO: Integration tests needs to reference the main project, otherwise they don't wait for build
+
 #### Step 1: Inject the artifacts path into the test assembly
 
 In order to test the NuGet packages, the tests need to be able to find them. Relying on relative paths between the main
@@ -135,13 +137,10 @@ using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a tempor
 +   // Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
 +   using (PackageRepository repo = PackageRepository.Create(temp.FullName, _packageFeeds))
 +   {
-+       // Add our temp directory to %PATH% so installed tools can be found and executed
-+       Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") + $"{Path.PathSeparator}{temp.FullName}");
++
 +   }
 }
 ```
-
-Lastly, we append the temp dir to the `%PATH%` environment variable so that any installed tools can be found.
 
 ### Dotnet tool tests
 
@@ -160,7 +159,8 @@ In `Microsoft.Botsay.csproj`, enable `GeneratePackageOnBuild` so your `.nupkg` i
 
 #### Step 7: Run dotnet install and pass in our temp parameters
 
-The final setup step is to run `dotnet tool install` and pass in the temp dir as the `--tool-path` and the
+The final step is the isntall the tool itself. First, we append the temp dir to the `%PATH%` environment variable so that
+the installed tool can be found. Then we run `dotnet tool install` and pass in the temp dir as the `--tool-path` and the
 `nuget.config` file to `--configfile`. Note that if your NuGet packages are pre-release (e.g. include "-beta" in the
 name) you'll want to also pass the `--prerelease` flag.
 
@@ -170,9 +170,9 @@ using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a tempor
     // Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
     using (PackageRepository repo = PackageRepository.Create(temp.FullName, _packageFeeds))
     {
-        // Add our temp directory to %PATH% so installed tools can be found and executed
-        Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") + $"{Path.PathSeparator}{temp.FullName}");
-
++       // Add our temp directory to %PATH% so installed tools can be found and executed
++       Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") + $"{Path.PathSeparator}{temp.FullName}");
++
 +        // Step 7: Run `dotnet tool install`
 +        string[] args = $"tool install microsoft.botsay --tool-path {temp.FullName} --configfile {repo.NuGetConfigPath}".Split(" ");
 
