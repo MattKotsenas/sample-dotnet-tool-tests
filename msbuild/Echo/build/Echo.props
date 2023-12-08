@@ -1,0 +1,3 @@
+<Project>
+  <UsingTask AssemblyFile="../tasks/netstandard2.0/Echo.dll" TaskName="Echo.EchoTask" />
+</Project>
