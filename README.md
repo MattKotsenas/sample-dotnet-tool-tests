@@ -1,5 +1,7 @@
 # Integration testing for NuGet packages
 
+// TODO: Clean this up. Confusing structure that combines the 'what' with the 'why'.
+
 This sample repo is an example of integration tests for NuGet packages. The `botsay` folder is an example of testing a dotnet
 global tool, and the `msbuild` folder is an example of a package that adds custom MSBuild tasks. The examples use the
 `common` folder for environment setup, which uses [MSBuildProjectCreator] and [xUnit] (though any test framework should
