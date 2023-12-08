@@ -15,6 +15,9 @@ The MSBuild example is a simple [custom MSBuild task][custom-msbuild-tasks] that
 
 ## Why integration tests?
 
+// TODO: Contrast with https://learn.microsoft.com/en-us/visualstudio/msbuild/tutorial-test-custom-task?view=vs-2022
+// TODO: Consider upstreaming this doc against https://learn.microsoft.com/en-us/visualstudio/msbuild/tutorial-test-custom-task?view=vs-2022
+
 Integration tests shouldn't replace unit tests, but they can provide some additional test coverage for some important
 scenarios. For example:
 
@@ -73,7 +76,13 @@ like this:
 
 ```csharp
 Assembly testAssembly; // Get a reference to the test assembly that contains the assembly metadata
-testAssembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToDictionary(a => a.Key, a => a.Value);
+IReadOnlyDictionary<string, string?> metadata = testAssembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToDictionary(a => a.Key, a => a.Value);
+```
+
+From there you can then grab the artifacts directory like this
+
+```csharp
+metadata.TryGetValue("ArtifactsPath", out string? artifactsPath)
 ```
 
 If you're in a scenario where reflection isn't available, you can also use a source generator such as

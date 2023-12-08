@@ -1,9 +1,9 @@
-﻿namespace Microsoft.Botsay.IntegrationTests;
+﻿namespace NuGetTestUtils;
 
 /// <summary>
 /// Helper class that finds all directories that contain .nupkg files under a given root directory.
 /// </summary>
-internal class NupkgFinder
+public class NupkgFinder
 {
     private readonly string _root;
 

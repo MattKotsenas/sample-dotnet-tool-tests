@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace Microsoft.Botsay.IntegrationTests;
+namespace NuGetTestUtils;
 
 /// <summary>
 /// Parses any &lt;AssemblyMetadata&gt; items defined by MSBuild. This allows MSBuild to inject values from the build process
@@ -9,7 +9,7 @@ namespace Microsoft.Botsay.IntegrationTests;
 /// <remarks>
 /// See https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#assemblymetadata.
 /// </remarks>
-internal class AssemblyMetadataParser
+public class AssemblyMetadataParser
 {
     private readonly Assembly _targetAssembly;
 

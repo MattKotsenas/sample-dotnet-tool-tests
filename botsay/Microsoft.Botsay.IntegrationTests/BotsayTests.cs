@@ -1,12 +1,13 @@
 using CliWrap;
 using CliWrap.Buffered;
 using Microsoft.Build.Utilities.ProjectCreation;
+using NuGetTestUtils;
 using System.IO.Abstractions;
 using Xunit.Abstractions;
 
 namespace Microsoft.Botsay.IntegrationTests;
 
-public class BotsayTests
+public class BotsayTests : NuGetIntegrationTestBase
 {
     private readonly Uri[] _packageFeeds;
     private readonly IFileSystem _fs = new FileSystem();
@@ -14,23 +15,9 @@ public class BotsayTests
 
     public BotsayTests(ITestOutputHelper output)
     {
-        string artifactsPath = GetArtifactsPathFromAssemblyMetadata();
+        string artifactsPath = Step2RetrieveAssemblyMetadata(typeof(BotsayTests).Assembly);
         _packageFeeds = GetNuGetPackageFeedsFromArtifactsPath(artifactsPath);
         _output = output;
-    }
-
-    private static string GetArtifactsPathFromAssemblyMetadata()
-    {
-        IReadOnlyDictionary<string, string?> metadata = new AssemblyMetadataParser().Parse();
-
-        // The key 'ArtifactsPath' is defined as AssemblyMetadata in the .csproj file.
-        const string key = "ArtifactsPath";
-        if (!metadata.TryGetValue(key, out string? artifactsPath) || artifactsPath is null || !Directory.Exists(artifactsPath))
-        {
-            throw new InvalidDataException($"Assembly metadata attribute '{key}' not found or does not exist.");
-        }
-
-        return artifactsPath;
     }
 
     private static Uri[] GetNuGetPackageFeedsFromArtifactsPath(string artifactsPath)
