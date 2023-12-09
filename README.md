@@ -42,8 +42,6 @@ Steps 6 - 8 are then specific to the dotnet tool and MSBuild task scenarios, and
 
 ### Common setup
 
-// TODO: Integration tests needs to reference the main project, otherwise they don't wait for build
-
 #### Step 1: Generate NuGet package on build (optional)
 
 In the projects that create NuGet packages (e.g. `Microsoft.Botsay.csproj` and `Echo.csproj`), enable
@@ -52,14 +50,26 @@ which causes confusion.
 
 ```diff
   <PropertyGroup>
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>botsay</ToolCommandName>
-    <RollForward>major</RollForward>
 +   <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 ```
 
-#### Step 2: Inject the artifacts path into the test assembly
+#### Step 2: Take an "build order only" reference from the test project to the main project (optional)
+
+If you're following my advice and generating a NuGet package on every build, you'll also want to enforce that any builds
+or runs of test projects ensure that the main project is up-to-date. To do that _without_ copying the main project
+binaries to your test project (which may invalidate the test) do a "build order only" reference. This reference enforces
+proper build ordering while preventing the output assemblies from being referenced or copied to the output directory.
+See https://github.com/dotnet/msbuild/issues/4371#issuecomment-1195950719 for additional information.
+
+```xml
+<ProjectReference Include="../path/to/project.csproj">
+    <Private>false</Private>
+    <ExcludeAssets>all</ExcludeAssets>
+</ProjectReference>
+```
+
+#### Step 3: Inject the artifacts path into the test assembly
 
 In order to test the NuGet packages, the tests need to be able to find them. Relying on relative paths between the main
 project's output directory and the test assembly can be fragile, especially across different test frameworks and
@@ -90,7 +100,7 @@ Next, we instruct MSBuild to inject that property into the test assembly via `<A
 + </ItemGroup>
 ```
 
-#### Step 3: Retrieve the artifacts path from assembly metadata
+#### Step 4: Retrieve the artifacts path from assembly metadata
 
 Once the artifacts path is injected into the assembly, we need to retrieve it at runtime. The sample includes a
 `AssemblyMetadataParser` class to encapsulate this responsibility. The bulk of the work is a single reflection call
@@ -110,7 +120,7 @@ metadata.TryGetValue("ArtifactsPath", out string? artifactsPath)
 If you're in a scenario where reflection isn't available, you can also use a source generator such as
 [ThisAssembly][thisassembly-github].
 
-#### Step 4: Convert the artifacts path to a set of Uris for use in the nuget.config
+#### Step 5: Convert the artifacts path to a set of Uris for use in the nuget.config
 
 In the sample I provided a `NupkgFinder` class to demonstrate walking the artifacts directory to find NuGet packages.
 This strategy avoids hardcoding paths and project names into your tests, at the cost of slightly more complicated code.
@@ -121,7 +131,7 @@ If you have a very simple scenario, it's OK to hardcode paths directly to NuGet 
 Uri[] packageFeeds = new [] { new Uri(packagePath) };
 ```
 
-#### Step 5: Create a temporary workspace
+#### Step 6: Create a temporary workspace
 
 Next we need to create a temporary directory to use as a workspace. In your test class / method, start by creating a
 temp dir. In the samples I've used TestableIO's `CreateDisposableDirectory` extension, as it simplifies creating a temp
@@ -137,7 +147,7 @@ using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a tempor
 }
 ```
 
-#### Step 6: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
+#### Step 7: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
 
 Inside our temp dir, use MSBuildProjectCreator's `PackageRepository`. This class does a few things for us:
 
@@ -160,7 +170,7 @@ using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a tempor
 
 ### Dotnet tool tests
 
-#### Step 7: Run dotnet install and pass in our temp parameters
+#### Step 8: Run dotnet install and pass in our temp parameters
 
 The final step is the install the tool itself. First, we append the temp dir to the `%PATH%` environment variable so that
 the installed tool can be found. Then we run `dotnet tool install` and pass in the temp dir as the `--tool-path` and the
@@ -186,13 +196,12 @@ using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a tempor
 In the sample I use the excellent [CliWrap][cliwrap-github] library to make working with external processes easier. Of
 course you can always use `Process.Start()` directly if you wish.
 
-#### Step 8: Run your test
+#### Step 9: Run the `botsay` tool and assert the expected output
 
 With that setup in place, we can now run our test. Execute the `botsay` tool and assert the standard output is as
 expected.
 
 ```csharp
-// Step 8: Run the `botsay` tool and assert the expected output
 string[] args = $"hello from the bot".Split(" ");
 
 BufferedCommandResult result = await Cli.Wrap("botsay").WithArguments(args).ExecuteBufferedAsync();
@@ -201,7 +210,7 @@ Assert.Equal(expected, result.StandardOutput);
 
 ### MSBuild tests
 
-#### Step 7:
+#### Step 8: Create the "consuming" project that will install the NuGet package
 
 With the environment setup complete, we can now create a "consuming" project that will install our NuGet package. We
 again leverage MSBuildProjectCreator, this time using the `ProjectCreator` templates to create our consuming project.
@@ -209,7 +218,6 @@ Often you'll need several such projects in order to properly test the right comb
 values, and other settings.
 
 ```diff
-// Step 6: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
 using (PackageRepository repo = PackageRepository.Create(temp.FullName, PackageFeeds))
 {
 +   var project = ProjectCreator.Templates.SdkCsproj()
@@ -218,14 +226,14 @@ using (PackageRepository repo = PackageRepository.Create(temp.FullName, PackageF
 }
 ```
 
-#### Step 8:
+#### Step 9: Try building the project and asserting the results
 
 At long last, we can try building our project and asserting that the build succeeded / failed as expected, along with
 any log output. For example, in the msbuild sample I include a test to verify that the injected target properly
 handles incremental build.
 
 ```csharp
-// Step 8: Try building the project and asserting the results
+// Step 9: Try building the project and asserting the results
 project.TryBuild(restore: true, out bool result, out BuildOutput buildOutput);
 Assert.True(result);
 Assert.Contains(expectedOutput, buildOutput.GetConsoleLog());

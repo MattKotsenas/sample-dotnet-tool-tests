@@ -24,7 +24,6 @@ public class AssemblyMetadataParser
 
     public IReadOnlyDictionary<string, string?> Parse()
     {
-        // Step 3: Retrieve the assembly metadata attributes and collect into a dictionary
         return _targetAssembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToDictionary(a => a.Key, a => a.Value);
     }
 }

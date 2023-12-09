@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <!--
-      Step 2: Inject the base artifacts path (defined in //Directory.Build.props) into the assembly so that the
+      Step 3: Inject the base artifacts path (defined in //Directory.Build.props) into the assembly so that the
       tests can create a nuget.config that points to the correct place, regardless of the path the test harness
       uses to run the tests.
 
@@ -39,6 +39,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\common\NuGetTestUtils.csproj" />
+
+    <!-- Step 2: Take an "build order only" reference from the test project to the main project -->
+    <ProjectReference Include="../Microsoft.Botsay/Microsoft.Botsay.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>all</ExcludeAssets>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>
