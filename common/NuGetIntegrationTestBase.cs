@@ -5,9 +5,7 @@ namespace NuGetTestUtils;
 
 public abstract class NuGetIntegrationTestBase : MSBuildTestBase
 {
-    // TODO Step 3, 4, 5
-
-    protected virtual string Step2RetrieveAssemblyMetadata(Assembly assembly)
+    protected virtual string Step2RetrieveArtifactsPathFromAssemblyMetadata(Assembly assembly)
     {
         IReadOnlyDictionary<string, string?> metadata = new AssemblyMetadataParser(assembly).Parse();
 
@@ -19,5 +17,11 @@ public abstract class NuGetIntegrationTestBase : MSBuildTestBase
         }
 
         return artifactsPath;
+    }
+
+    protected static Uri Step3ConvertArtifactsPathToNuGetFeedUri(string artifactsPath)
+    {
+        // Step 3: Convert the artifact path to a Uri for use in the nuget.config
+        return NupkgFinder.Find(artifactsPath).AsFeedUri();
     }
 }

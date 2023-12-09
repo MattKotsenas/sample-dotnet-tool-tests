@@ -62,7 +62,7 @@ Start by creating an MSBuild property to some well-known output location in your
 ```
 
 Next, we instruct MSBuild to inject that property into the test assembly via `<AssemblyMetadata>`. In
-`Microsoft.Botsay.IntegrationTests.csproj`, add the following ItemGroup:
+`Microsoft.Botsay.IntegrationTests.csproj` and `Echo.IntegrationTests.csproj`, add the following ItemGroup:
 
 ```diff
 + <ItemGroup>
@@ -70,7 +70,7 @@ Next, we instruct MSBuild to inject that property into the test assembly via `<A
 + </ItemGroup>
 ```
 
-#### Step 2: Retrieve the assembly metadata
+#### Step 2: Retrieve the artifacts path from assembly metadata
 
 Once the artifacts path is injected into the assembly, we need to retrieve it at runtime. The sample includes a
 `AssemblyMetadataParser` class to encapsulate this responsibility. The bulk of the work is a single reflection call
@@ -90,9 +90,7 @@ metadata.TryGetValue("ArtifactsPath", out string? artifactsPath)
 If you're in a scenario where reflection isn't available, you can also use a source generator such as
 [ThisAssembly][thisassembly-github].
 
-#### Step 3: Convert the artifact path(s) to a set of Uris for use in the nuget.config
-
-// TODO: Update this?
+#### Step 3: Convert the artifacts path to a set of Uris for use in the nuget.config
 
 In the sample I provided a `NupkgFinder` class to demonstrate walking the artifacts directory to find NuGet packages.
 This strategy avoids hardcoding paths and project names into your tests, at the cost of slightly more complicated code.

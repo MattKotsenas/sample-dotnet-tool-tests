@@ -9,23 +9,17 @@ namespace Microsoft.Botsay.IntegrationTests;
 
 public class BotsayTests : NuGetIntegrationTestBase
 {
-    private readonly Uri[] _packageFeeds;
+    private readonly Uri _packageFeeds;
     private readonly IFileSystem _fs = new FileSystem();
     private readonly ITestOutputHelper _output;
 
     public BotsayTests(ITestOutputHelper output)
     {
-        string artifactsPath = Step2RetrieveAssemblyMetadata(typeof(BotsayTests).Assembly);
-        _packageFeeds = GetNuGetPackageFeedsFromArtifactsPath(artifactsPath);
+        string artifactsPath = Step2RetrieveArtifactsPathFromAssemblyMetadata(typeof(BotsayTests).Assembly);
+        _packageFeeds = Step3ConvertArtifactsPathToNuGetFeedUri(artifactsPath);
         _output = output;
     }
 
-    private static Uri[] GetNuGetPackageFeedsFromArtifactsPath(string artifactsPath)
-    {
-        // Step 4: Convert the artifact path(s) to a set of Uris for use in the nuget.config
-        IReadOnlyCollection<string> directories = new NupkgFinder(artifactsPath).GetDirectories();
-        return directories.Select(d => new Uri(d)).ToArray();
-    }
 
     private static async Task<BufferedCommandResult> Install(string temp, string nugetConfig)
     {
@@ -49,13 +43,13 @@ public class BotsayTests : NuGetIntegrationTestBase
     [Fact]
     public async Task CanInstallAndRun()
     {
-        // Step 5: Use TestableIO to create a temp directory that's automatically deleted via IDisposable.
+        // Step 4: Use TestableIO to create a temp directory that's automatically deleted via IDisposable.
         // See https://github.com/TestableIO/System.IO.Abstractions.Extensions#automatic-cleanup-with-disposable-extensions
         using (_fs.CreateDisposableDirectory(out IDirectoryInfo temp))
         {
             _output.WriteLine($"Using temp directory '{temp.FullName}'.");
 
-            // Step 6: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
+            // Step 5: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
             using (PackageRepository repo = PackageRepository.Create(temp.FullName, _packageFeeds))
             {
                 // Add our temp directory to %PATH% so installed tools can be found and executed

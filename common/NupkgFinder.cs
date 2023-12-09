@@ -1,22 +1,36 @@
 ﻿namespace NuGetTestUtils;
 
 /// <summary>
-/// Helper class that finds all directories that contain .nupkg files under a given root directory.
+/// Extension methos to help find .nupkg files under a given root directory.
 /// </summary>
-public class NupkgFinder
+public static class NupkgFinder
 {
-    private readonly string _root;
-
-    public NupkgFinder(string root)
+    public static IReadOnlyCollection<FileInfo> Find(string root)
     {
-        _root = root;
+        string[] packages = Directory.GetFiles(root, "*.nupkg", SearchOption.AllDirectories);
+
+        return packages.Select(p => new FileInfo(p)).ToArray();
     }
 
-    public IReadOnlyCollection<string> GetDirectories()
+    public static Uri AsFeedUri(this IReadOnlyCollection<FileInfo> packages)
     {
-        string[] nugetPackages = Directory.GetFiles(_root, "*.nupkg", SearchOption.AllDirectories);
-        string[] nugetDirectories = nugetPackages.Select(p => new FileInfo(p).Directory!.FullName).Distinct().ToArray();
+        string[] directories = packages.Select(p => p.Directory!.FullName).Distinct().ToArray();
 
-        return nugetDirectories;
+        return new Uri(directories.Single());
+    }
+
+    public static (FileInfo package, string Version) LatestWithName(this IReadOnlyCollection<FileInfo> packages, string name)
+    {
+        FileInfo package = packages
+            .Where(p => p.Name.StartsWith($"{name}."))
+            .OrderByDescending(p => p.LastAccessTimeUtc)
+            .First();
+
+        return (package, package.GetNuGetPackageVersion(name));
+    }
+
+    public static string GetNuGetPackageVersion(this FileInfo package, string name)
+    {
+        return package.Name.Replace($"{name}.", string.Empty).Replace(package.Extension, string.Empty);
     }
 }
