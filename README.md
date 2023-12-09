@@ -15,15 +15,20 @@ The MSBuild example is a simple [custom MSBuild task][custom-msbuild-tasks] that
 
 ## Why integration tests?
 
-// TODO: Contrast with https://learn.microsoft.com/en-us/visualstudio/msbuild/tutorial-test-custom-task?view=vs-2022
 // TODO: Consider upstreaming this doc against https://learn.microsoft.com/en-us/visualstudio/msbuild/tutorial-test-custom-task?view=vs-2022
 
 Integration tests shouldn't replace unit tests, but they can provide some additional test coverage for some important
 scenarios. For example:
 
 * Verifying dependencies or content files are packaged properly
-* Validating behavior across .NET runtime versions
-* Verifying [invoking naming rules][dotnet-tool-invoke-names]
+* Validating behavior across SDK and runtime versions
+* Verifying [invoking naming rules][dotnet-tool-invoke-names] for tools
+* Verifying .props and .targets files in a package ([docs][nuget-msbuild-props-targets])
+* Other advanced features like source transforms, install.ps1, etc.
+
+There's also basic integration testing information available at
+https://learn.microsoft.com/en-us/visualstudio/msbuild/tutorial-test-custom-task?view=vs-2022, however it doesn't verify
+any of the scenarios just mentioned.
 
 ## Step-by-step process
 
@@ -236,3 +241,4 @@ Assert.Contains(expectedOutput, buildOutput.GetConsoleLog());
 [thisassembly-github]: https://github.com/devlooped/ThisAssembly
 [nuget-config-docs]: https://learn.microsoft.com/en-us/nuget/reference/nuget-config-file#config-section
 [cliwrap-github]: https://github.com/Tyrrrz/CliWrap
+[nuget-msbuild-props-targets]: https://learn.microsoft.com/en-us/nuget/concepts/msbuild-props-and-targets
