@@ -5,31 +5,59 @@ using Xunit.Abstractions;
 
 namespace Echo.IntegrationTests;
 
-
-public abstract class EchoTestsBase : NuGetIntegrationTestBase
+public abstract class EchoTestsBase : MSBuildTestBase
 {
-    // TODO: Fix naming
-    protected readonly Uri[] _packageFeeds;
-    protected readonly IFileSystem _fs = new FileSystem();
-    protected readonly ITestOutputHelper _output;
-    protected readonly string _packageName = "Echo";
-    protected readonly string _artifactsPath;
+    protected ITestOutputHelper Output { get; private set; }
+    protected string ArtifactsPath { get; private set; }
+    protected Uri[] PackageFeeds { get; private set; }
+    protected string PackageName { get; private set; } = "Echo";
+    protected string PackageVersion { get; private set; }
 
     protected EchoTestsBase(ITestOutputHelper output)
     {
-        _artifactsPath = Step2RetrieveArtifactsPathFromAssemblyMetadata(typeof(EchoTestsBase).Assembly);
-        _packageFeeds =
+        Output = output;
+
+        ArtifactsPath = RetrieveArtifactsPathFromAssemblyMetadata();
+        PackageFeeds =
         [
-            Step3ConvertArtifactsPathToNuGetFeedUri(_artifactsPath),
+            ConvertArtifactsPathToNuGetFeedUri(),
             new Uri("https://api.nuget.org/v3/index.json")
         ];
-        _output = output;
+        PackageVersion = GetLatestPackageVersion();
+    }
+
+    private string RetrieveArtifactsPathFromAssemblyMetadata()
+    {
+        // Step 2: Retrieve the artifacts path from assembly metadata
+        IReadOnlyDictionary<string, string?> metadata = new AssemblyMetadataParser(typeof(EchoTestsBase).Assembly).Parse();
+
+        // The key 'ArtifactsPath' is defined as AssemblyMetadata in the test's .csproj file.
+        const string key = "ArtifactsPath";
+        if (!metadata.TryGetValue(key, out string? artifactsPath) || artifactsPath is null || !Directory.Exists(artifactsPath))
+        {
+            throw new InvalidDataException($"Assembly metadata attribute '{key}' not found or does not exist.");
+        }
+
+        return artifactsPath;
+    }
+
+    private Uri ConvertArtifactsPathToNuGetFeedUri()
+    {
+        // Step 3: Convert the artifact path to a Uri for use in the nuget.config
+        return NupkgFinder.Find(ArtifactsPath).AsFeedUri();
+    }
+
+    private string GetLatestPackageVersion()
+    {
+        return NupkgFinder.Find(ArtifactsPath).LatestWithName(PackageName).Version;
     }
 }
 
 public class EchoTests : EchoTestsBase
 {
-    public EchoTests(ITestOutputHelper output) : base(output)
+    private readonly IFileSystem _fs = new FileSystem();
+
+    public EchoTests(ITestOutputHelper output) :base (output)
     {
     }
 
@@ -40,15 +68,13 @@ public class EchoTests : EchoTestsBase
         // See https://github.com/TestableIO/System.IO.Abstractions.Extensions#automatic-cleanup-with-disposable-extensions
         using (_fs.CreateDisposableDirectory(out IDirectoryInfo temp))
         {
-            _output.WriteLine($"Using temp directory '{temp.FullName}'.");
+            Output.WriteLine($"Using temp directory '{temp.FullName}'.");
 
             // Step 5: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
-            using (PackageRepository repo = PackageRepository.Create(temp.FullName, _packageFeeds))
+            using (PackageRepository repo = PackageRepository.Create(temp.FullName, PackageFeeds))
             {
-                string version = NupkgFinder.Find(_artifactsPath).LatestWithName(_packageName).Version;
-
                 var project = ProjectCreator.Templates.SdkCsproj()
-                    .ItemPackageReference(_packageName, version)
+                    .ItemPackageReference(PackageName, PackageVersion)
                     .Save(Path.Combine(temp.FullName, "Sample", "Sample.csproj"));
 
                 project.TryBuild(restore: true, out bool result, out BuildOutput buildOutput);
@@ -62,7 +88,9 @@ public class EchoTests : EchoTestsBase
 
 public class IncrementalBuiltEchoTests : EchoTestsBase
 {
-    public IncrementalBuiltEchoTests(ITestOutputHelper output) : base(output)
+    private readonly IFileSystem _fs = new FileSystem();
+
+    public IncrementalBuiltEchoTests(ITestOutputHelper output) : base (output)
     {
     }
 
@@ -73,15 +101,13 @@ public class IncrementalBuiltEchoTests : EchoTestsBase
         // See https://github.com/TestableIO/System.IO.Abstractions.Extensions#automatic-cleanup-with-disposable-extensions
         using (_fs.CreateDisposableDirectory(out IDirectoryInfo temp))
         {
-            _output.WriteLine($"Using temp directory '{temp.FullName}'.");
+            Output.WriteLine($"Using temp directory '{temp.FullName}'.");
 
             // Step 5: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
-            using (PackageRepository repo = PackageRepository.Create(temp.FullName, _packageFeeds))
+            using (PackageRepository repo = PackageRepository.Create(temp.FullName, PackageFeeds))
             {
-                string version = NupkgFinder.Find(_artifactsPath).LatestWithName(_packageName).Version;
-
                 var project = ProjectCreator.Templates.SdkCsproj()
-                    .ItemPackageReference(_packageName, version)
+                    .ItemPackageReference(PackageName, PackageVersion)
                     .Save(Path.Combine(temp.FullName, "Sample", "Sample.csproj"));
 
                 string incrementalBuildMessage = "Skipping target \"DoEcho\" because all output files are up-to-date with respect to the input files.";

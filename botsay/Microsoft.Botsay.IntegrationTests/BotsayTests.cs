@@ -3,11 +3,12 @@ using CliWrap.Buffered;
 using Microsoft.Build.Utilities.ProjectCreation;
 using NuGetTestUtils;
 using System.IO.Abstractions;
+using System.Reflection;
 using Xunit.Abstractions;
 
 namespace Microsoft.Botsay.IntegrationTests;
 
-public class BotsayTests : NuGetIntegrationTestBase
+public class BotsayTests
 {
     private readonly Uri _packageFeeds;
     private readonly IFileSystem _fs = new FileSystem();
@@ -15,11 +16,31 @@ public class BotsayTests : NuGetIntegrationTestBase
 
     public BotsayTests(ITestOutputHelper output)
     {
-        string artifactsPath = Step2RetrieveArtifactsPathFromAssemblyMetadata(typeof(BotsayTests).Assembly);
-        _packageFeeds = Step3ConvertArtifactsPathToNuGetFeedUri(artifactsPath);
+        string artifactsPath = RetrieveArtifactsPathFromAssemblyMetadata(typeof(BotsayTests).Assembly);
+        _packageFeeds = ConvertArtifactsPathToNuGetFeedUri(artifactsPath);
         _output = output;
     }
 
+    private string RetrieveArtifactsPathFromAssemblyMetadata(Assembly assembly)
+    {
+        // Step 2: Retrieve the artifacts path from assembly metadata
+        IReadOnlyDictionary<string, string?> metadata = new AssemblyMetadataParser(assembly).Parse();
+
+        // The key 'ArtifactsPath' is defined as AssemblyMetadata in the test's .csproj file.
+        const string key = "ArtifactsPath";
+        if (!metadata.TryGetValue(key, out string? artifactsPath) || artifactsPath is null || !Directory.Exists(artifactsPath))
+        {
+            throw new InvalidDataException($"Assembly metadata attribute '{key}' not found or does not exist.");
+        }
+
+        return artifactsPath;
+    }
+
+    private static Uri ConvertArtifactsPathToNuGetFeedUri(string artifactsPath)
+    {
+        // Step 3: Convert the artifact path to a Uri for use in the nuget.config
+        return NupkgFinder.Find(artifactsPath).AsFeedUri();
+    }
 
     private static async Task<BufferedCommandResult> Install(string temp, string nugetConfig)
     {
