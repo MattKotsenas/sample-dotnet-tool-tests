@@ -29,8 +29,8 @@
 
     <!-- Step 2: Take an "build order only" reference from the test project to the main project -->
     <ProjectReference Include="../Echo/Echo.csproj">
-        <Private>false</Private>
-        <ExcludeAssets>all</ExcludeAssets>
+      <Private>false</Private>
+      <ExcludeAssets>all</ExcludeAssets>
     </ProjectReference>
   </ItemGroup>
 

@@ -1,44 +1,42 @@
-# Integration testing for NuGet packages
+# Automated integration testing for NuGet packages
 
-// TODO: Clean this up. Confusing structure that combines the 'what' with the 'why'.
+Testing NuGet packages is typically a manual affair. Developers create a package, create a package source to point to
+that package, and then manually install and uninstall the package into some projects to verify behavior. While this
+can work for simple dependencies, NuGet packages can be very complicated ecosystems, bundling up not just DLLs but
+additional content files, transformable source files, CLI tools, custom MSBuild tasks and targets, and more.
+Additionally, the content and behavior can vary depending on the type and target framework version of the consuming
+project.
 
-This sample repo is an example of integration tests for NuGet packages. The `botsay` folder is an example of testing a dotnet
-global tool, and the `msbuild` folder is an example of a package that adds custom MSBuild tasks. The examples use the
-`common` folder for environment setup, which uses [MSBuildProjectCreator] and [xUnit] (though any test framework should
-work).
+After building and testing a few NuGet packages for .NET [CLI tools][dotnet-global-tools] and
+[MSBuild Target packages][msbuild-target-packages], I decided to create this sample repo to demonstrate how to automate
+integration testing scenarios for NuGet packages.
 
-The example tool is the `botsay` tool from the [.NET tool tutorial][dotnet-tool-tutorial] packaged locally as a NuGet
-package. The tests create a new temporary package repository and isolated [NuGet package cache][nuget-package-cache]
-to test installing and running the tool without polluting your package caches.
+## A quick repo tour
 
-The MSBuild example is a simple [custom MSBuild task][custom-msbuild-tasks] that justs outputs a hello world message.
+The `botsay` folder is an example of testing a dotnet CLI tool. It builds the botsay tool from the
+[.NET tool tutorial][dotnet-tool-tutorial] and adds integration tests to verify that the tool can be installed and
+invoked.
 
-## Why integration tests?
+The `msbuild` folder is an example of a package that adds custom MSBuild tasks. It's a simple
+[custom MSBuild task][custom-msbuild-tasks] that hook's into the consuming project's build process and echos a hello
+world message to the log.
 
-// TODO: Consider upstreaming this doc against https://learn.microsoft.com/en-us/visualstudio/msbuild/tutorial-test-custom-task?view=vs-2022
-
-Integration tests shouldn't replace unit tests, but they can provide some additional test coverage for some important
-scenarios. For example:
-
-* Verifying dependencies or content files are packaged properly
-* Validating behavior across SDK and runtime versions
-* Verifying [invoking naming rules][dotnet-tool-invoke-names] for tools
-* Verifying .props and .targets files in a package ([docs][nuget-msbuild-props-targets])
-* Other advanced features like source transforms, install.ps1, etc.
-
-There's also basic integration testing information available at
-https://learn.microsoft.com/en-us/visualstudio/msbuild/tutorial-test-custom-task?view=vs-2022, however it doesn't verify
-any of the scenarios just mentioned.
+Both examples use the `common` folder for setup, which uses [MSBuildProjectCreator] and [xUnit], though any test
+framework should work. The environment is complete with a temporary package repository and isolated
+[NuGet package cache][nuget-package-cache] to test installing and running the tool without polluting your package caches.
 
 ## Step-by-step process
 
-Here's a step-by-step walkthrough of the setup and testing process. Start by reviewing steps 1 - 5 in the common folder.
-These steps prepare the environment and ensure:
+Here's a step-by-step walkthrough of the setup and testing process. Start by reviewing steps 1 - 7, which are common
+between all NuGet test types. These steps prepare the environment and ensure:
  * The most recent version of your package is used
  * That tests don't pollute your package caches
  * That tests clean up properly
 
-Steps 6 - 8 are then specific to the dotnet tool and MSBuild task scenarios, and thus are separated for clarity.
+Steps 8 - 9 are specific to each test scenario, and thus are separated for clarity.
+
+Each step is also has a corresponding comment in the sample repo, so you can search for each step by number to jump
+between this linear guide and the code in-context.
 
 ### Common setup
 
@@ -57,15 +55,15 @@ which causes confusion.
 #### Step 2: Take an "build order only" reference from the test project to the main project (optional)
 
 If you're following my advice and generating a NuGet package on every build, you'll also want to enforce that any builds
-or runs of test projects ensure that the main project is up-to-date. To do that _without_ copying the main project
-binaries to your test project (which may invalidate the test) do a "build order only" reference. This reference enforces
-proper build ordering while preventing the output assemblies from being referenced or copied to the output directory.
+and test runs ensure that the main project is up-to-date. To do that _without_ copying the main project binaries to your
+test project (which may invalidate the test) do a "build order only" reference. This reference enforces proper build
+ordering while preventing the output assemblies from being referenced or copied to the output directory.
 See https://github.com/dotnet/msbuild/issues/4371#issuecomment-1195950719 for additional information.
 
 ```xml
 <ProjectReference Include="../path/to/project.csproj">
-    <Private>false</Private>
-    <ExcludeAssets>all</ExcludeAssets>
+  <Private>false</Private>
+  <ExcludeAssets>all</ExcludeAssets>
 </ProjectReference>
 ```
 
@@ -77,7 +75,7 @@ harnesses.
 
 The way I like to solve this problem is by injecting the source of truth (MSBuild properties / items) into the test
 assembly. In this repo I'm using .NET 8's new [simplified artifacts layout][dotnet-artifacts-layout], as it defines a
-common output directory the solution, instead of creating output directories per project. However, any output layout
+common output directory for all projects instead of creating output directories per project. However, any output layout
 can work.
 
 Start by creating an MSBuild property to some well-known output location in your solution. In this case I'm using the
@@ -168,7 +166,7 @@ using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a tempor
 }
 ```
 
-### Dotnet tool tests
+### CLI tool tests
 
 #### Step 8: Run dotnet install and pass in our temp parameters
 
@@ -178,18 +176,14 @@ the installed tool can be found. Then we run `dotnet tool install` and pass in t
 name) you'll want to also pass the `--prerelease` flag.
 
 ```diff
-using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a temporary directory that is automatically cleaned up
+// Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
+using (PackageRepository repo = PackageRepository.Create(temp.FullName, _packageFeeds))
 {
-    // Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
-    using (PackageRepository repo = PackageRepository.Create(temp.FullName, _packageFeeds))
-    {
-+       // Add our temp directory to %PATH% so installed tools can be found and executed
-+       Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") + $"{Path.PathSeparator}{temp.FullName}");
++   // Add our temp directory to %PATH% so installed tools can be found and executed
++   Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") + $"{Path.PathSeparator}{temp.FullName}");
 +
-+        string[] args = $"tool install microsoft.botsay --tool-path {temp.FullName} --configfile {repo.NuGetConfigPath}".Split(" ");
-
-+        await Cli.Wrap("dotnet").WithArguments(args).ExecuteBufferedAsync();
-    }
++    string[] args = $"tool install microsoft.botsay --tool-path {temp.FullName} --configfile {repo.NuGetConfigPath}".Split(" ");
++    await Cli.Wrap("dotnet").WithArguments(args).ExecuteBufferedAsync();
 }
 ```
 
@@ -204,7 +198,7 @@ expected.
 ```csharp
 string[] args = $"hello from the bot".Split(" ");
 
-BufferedCommandResult result = await Cli.Wrap("botsay").WithArguments(args).ExecuteBufferedAsync();
+var result = await Cli.Wrap("botsay").WithArguments(args).ExecuteBufferedAsync();
 Assert.Equal(expected, result.StandardOutput);
 ```
 
@@ -239,6 +233,8 @@ Assert.True(result);
 Assert.Contains(expectedOutput, buildOutput.GetConsoleLog());
 ```
 
+[dotnet-global-tools]: https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools
+[msbuild-target-packages]: https://learn.microsoft.com/en-us/nuget/concepts/msbuild-props-and-targets
 [custom-msbuild-tasks]: https://learn.microsoft.com/en-us/visualstudio/msbuild/tutorial-custom-task-code-generation?view=vs-2022
 [xUnit]: https://xunit.net/
 [MSBuildProjectCreator]: https://github.com/jeffkl/MSBuildProjectCreator
@@ -249,4 +245,3 @@ Assert.Contains(expectedOutput, buildOutput.GetConsoleLog());
 [thisassembly-github]: https://github.com/devlooped/ThisAssembly
 [nuget-config-docs]: https://learn.microsoft.com/en-us/nuget/reference/nuget-config-file#config-section
 [cliwrap-github]: https://github.com/Tyrrrz/CliWrap
-[nuget-msbuild-props-targets]: https://learn.microsoft.com/en-us/nuget/concepts/msbuild-props-and-targets
