@@ -28,7 +28,7 @@ public abstract class EchoTestsBase : MSBuildTestBase
 
     private string RetrieveArtifactsPathFromAssemblyMetadata()
     {
-        // Step 2: Retrieve the artifacts path from assembly metadata
+        // Step 3: Retrieve the artifacts path from assembly metadata
         IReadOnlyDictionary<string, string?> metadata = new AssemblyMetadataParser(typeof(EchoTestsBase).Assembly).Parse();
 
         // The key 'ArtifactsPath' is defined as AssemblyMetadata in the test's .csproj file.
@@ -43,7 +43,7 @@ public abstract class EchoTestsBase : MSBuildTestBase
 
     private Uri ConvertArtifactsPathToNuGetFeedUri()
     {
-        // Step 3: Convert the artifact path to a Uri for use in the nuget.config
+        // Step 4: Convert the artifact path to a Uri for use in the nuget.config
         return NupkgFinder.Find(ArtifactsPath).AsFeedUri();
     }
 
@@ -64,21 +64,22 @@ public class EchoTests : EchoTestsBase
     [Fact]
     public void TheOutputIsInTheLog()
     {
-        // Step 4: Use TestableIO to create a temp directory that's automatically deleted via IDisposable.
-        // See https://github.com/TestableIO/System.IO.Abstractions.Extensions#automatic-cleanup-with-disposable-extensions
+        // Step 5: Create a temporary workspace
+        // Uses TestableIO extensions (see https://github.com/TestableIO/System.IO.Abstractions.Extensions#automatic-cleanup-with-disposable-extensions)
         using (_fs.CreateDisposableDirectory(out IDirectoryInfo temp))
         {
             Output.WriteLine($"Using temp directory '{temp.FullName}'.");
 
-            // Step 5: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
+            // Step 6: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
             using (PackageRepository repo = PackageRepository.Create(temp.FullName, PackageFeeds))
             {
+                // Step 7: Create our "consuming" project that will install our NuGet package
                 var project = ProjectCreator.Templates.SdkCsproj()
                     .ItemPackageReference(PackageName, PackageVersion)
                     .Save(Path.Combine(temp.FullName, "Sample", "Sample.csproj"));
 
+                // Step 8: Try building the project and asserting the results
                 project.TryBuild(restore: true, out bool result, out BuildOutput buildOutput);
-
                 Assert.True(result);
                 Assert.Contains("Hello, world!", buildOutput.GetConsoleLog());
             }
@@ -97,21 +98,23 @@ public class IncrementalBuiltEchoTests : EchoTestsBase
     [Fact]
     public void TheTaskIsRunOnce()
     {
-        // Step 4: Use TestableIO to create a temp directory that's automatically deleted via IDisposable.
-        // See https://github.com/TestableIO/System.IO.Abstractions.Extensions#automatic-cleanup-with-disposable-extensions
+        const string incrementalBuildMessage = "Skipping target \"DoEcho\" because all output files are up-to-date with respect to the input files.";
+
+        // Step 5: Create a temporary workspace
+        // Uses TestableIO extensions (see https://github.com/TestableIO/System.IO.Abstractions.Extensions#automatic-cleanup-with-disposable-extensions)
         using (_fs.CreateDisposableDirectory(out IDirectoryInfo temp))
         {
             Output.WriteLine($"Using temp directory '{temp.FullName}'.");
 
-            // Step 5: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
+            // Step 6: Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
             using (PackageRepository repo = PackageRepository.Create(temp.FullName, PackageFeeds))
             {
+                // Step 7: Create our "consuming" project that will install our NuGet package
                 var project = ProjectCreator.Templates.SdkCsproj()
                     .ItemPackageReference(PackageName, PackageVersion)
                     .Save(Path.Combine(temp.FullName, "Sample", "Sample.csproj"));
 
-                string incrementalBuildMessage = "Skipping target \"DoEcho\" because all output files are up-to-date with respect to the input files.";
-
+                // Step 8: Try building the project and asserting the results
                 project.TryBuild(restore: true, out bool initialBuildResult, out BuildOutput output);
                 Assert.True(initialBuildResult);
                 Assert.DoesNotContain(incrementalBuildMessage, output.GetConsoleLog());
