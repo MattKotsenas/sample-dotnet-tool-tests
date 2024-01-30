@@ -160,7 +160,7 @@ using (fs.CreateDisposableDirectory(out IDirectoryInfo temp)) // Create a tempor
 {
 -   // Use temp here as scratch space
 +   // Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
-+   using (PackageRepository repo = PackageRepository.Create(temp.FullName, _packageFeeds))
++   using (PackageRepository repo = PackageRepository.Create(temp.FullName, packageFeeds))
 +   {
 +
 +   }
@@ -178,7 +178,7 @@ name) you'll want to also pass the `--prerelease` flag.
 
 ```diff
 // Create a nuget.config that points to our feeds and sets cache properties to avoid polluting the global cache
-using (PackageRepository repo = PackageRepository.Create(temp.FullName, _packageFeeds))
+using (PackageRepository repo = PackageRepository.Create(temp.FullName, packageFeeds))
 {
 +   // Add our temp directory to %PATH% so installed tools can be found and executed
 +   Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") + $"{Path.PathSeparator}{temp.FullName}");
