@@ -64,6 +64,7 @@ See https://github.com/dotnet/msbuild/issues/4371#issuecomment-1195950719 for ad
 <ProjectReference Include="../path/to/project.csproj">
   <Private>false</Private>
   <ExcludeAssets>all</ExcludeAssets>
+  <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
 </ProjectReference>
 ```
 
