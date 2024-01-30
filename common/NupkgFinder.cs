@@ -1,7 +1,7 @@
 ﻿namespace NuGetTestUtils;
 
 /// <summary>
-/// Extension methos to help find .nupkg files under a given root directory.
+/// Extension methods to help find .nupkg files under a given root directory.
 /// </summary>
 public static class NupkgFinder
 {
