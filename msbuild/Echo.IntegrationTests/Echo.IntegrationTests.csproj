@@ -29,7 +29,9 @@
 
     <!-- Step 2: Take an "build order only" reference from the test project to the main project -->
     <ProjectReference Include="../Echo/Echo.csproj">
-      <Private>false</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+      <UndefineProperties>TargetFramework</UndefineProperties>
       <ExcludeAssets>all</ExcludeAssets>
     </ProjectReference>
   </ItemGroup>
