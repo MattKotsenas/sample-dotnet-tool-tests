@@ -23,7 +23,13 @@
 
   <ItemGroup>
     <PackageReference Include="CliWrap" Version="3.6.4" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
+    <!--
+      Ensure Microsoft.NET.Test.Sdk is >= 17.9.0 to avoid conflicts with NuGet.Frameworks.
+      See:
+        - https://github.com/jeffkl/MSBuildProjectCreator/issues/170
+        - https://github.com/microsoft/vstest/commit/ec9a138e10e68331b860765907e8650fd9ec1931
+    -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.TestingHelpers" Version="19.2.87" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Extensions" Version="2.0.5" />
     <PackageReference Include="xunit" Version="2.4.2" />
